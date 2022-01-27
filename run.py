@@ -8,7 +8,7 @@ import os
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import train_test_split
 from keras.preprocessing.image import ImageDataGenerator
-
+#creating csv with meta data
 def generate_file():
     with open('file.csv', 'w') as csv_file:
         csv_writer = csv.writer(csv_file)
