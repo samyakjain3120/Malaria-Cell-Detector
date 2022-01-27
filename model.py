@@ -1,14 +1,15 @@
 import tensorflow as tf
 import numpy as np
-
+#main class(compiles all the models)
 class Model:
-
+    #constructor
     def __init__(self, conv_size, hidden_size, n_classes):
         self.compiled = False
         self.conv_layers = []
         self.hidden_layers = []
         self.params = []
         temp = 3
+        #adding a variable number of convutional layers
         for size in conv_size:
             self.conv_layers.append(ConvLayer(
                 [5, 5],
@@ -17,26 +18,30 @@ class Model:
                 size))
             temp = size
         temp = 8450
+        #adding a variable number of hidden layers
         for size in hidden_size:
             self.hidden_layers.append(HiddenLayer(temp, size))
             temp = size
         self.hidden_layers.append(HiddenLayer(temp, n_classes, lambda x: x))
         self.n_classes = n_classes
-
     def compile(self, H, W):
         self.compiled = True
+        #placeholders used for taking input
         self.tfX = tf.placeholder(tf.float32, [None, H, W, 3])
         self.tfy = tf.placeholder(tf.int32, [None,])
         self.sess = tf.Session()
         Z = self.tfX
+        #forwarding input through multiple layers
         for layer in self.conv_layers:
             Z = layer.forward(Z)
         Z = tf.layers.Flatten()(Z)
+        
         for layer in self.hidden_layers:
             Z = layer.forward(Z)
         self.logits = Z
         # costa = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(
         #     logits=Z, labels=self.tfy))
+        #cost function 
         costa = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(
             logits=Z, labels=self.tfy))
         self.train_op = tf.train.RMSPropOptimizer(0.0001).minimize(costa)
@@ -44,13 +49,14 @@ class Model:
         self.cost = costa
         init = tf.global_variables_initializer()
         self.sess.run(init)
+        #storing all parameters
         for layer in self.hidden_layers:
             self.params += layer.params
         for layer in self.conv_layers:
             self.params += layer.params
         self.saver = tf.train.Saver(self.params)
         self.losses = []
-
+    
     def fit(self, X, y):
         if not self.compiled:
             raise RuntimeError("Compile the model first.")
@@ -61,7 +67,7 @@ class Model:
         self.losses.append(loss)
         return self.losses
 
-
+#calculating accuracy
 def calc_acc(p, t):
     correct = 0
     for i in range(len(t)):
@@ -69,7 +75,7 @@ def calc_acc(p, t):
             correct += 1
     return correct/len(t) * 100
 
-
+#creating hidden layer
 class HiddenLayer:
 
     def __init__(self, D, M, f=tf.nn.relu):
@@ -98,7 +104,7 @@ class ConvLayer:
             out = tf.nn.bias_add(out, self.b)
         out = tf.nn.max_pool(out, [1, 2, 2, 1], [1, 2, 2, 1], 'SAME')
         return tf.nn.relu(out)
-
+#initializing kernel
 def init_filter(shape):
     w = np.random.randn(*shape) * np.sqrt(2.0 / np.prod(shape[:-1]))
     return w.astype(np.float32)
